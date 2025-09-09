@@ -1,0 +1,77 @@
+name: update-homebrew-tap
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  update-tap:
+    name: Update Homebrew tap formula
+    # Requires a PAT with repo scope stored as TAP_TOKEN in this repo's secrets
+    if: ${{ secrets.TAP_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute URL and SHA256
+        id: meta
+        run: |
+          set -euo pipefail
+          TAG='${{ github.event.release.tag_name }}'
+          REPO='${{ github.repository }}'
+          URL="https://github.com/${REPO}/archive/refs/tags/${TAG}.tar.gz"
+          TMP=$(mktemp)
+          curl -fsSL "$URL" -o "$TMP"
+          if command -v sha256sum >/dev/null 2>&1; then
+            SHA=$(sha256sum "$TMP" | awk '{print $1}')
+          else
+            SHA=$(shasum -a 256 "$TMP" | awk '{print $1}')
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          repository: rhukster/homebrew-tap
+          token: ${{ secrets.TAP_TOKEN }}
+          path: tap
+
+      - name: Update formula file
+        working-directory: tap
+        env:
+          URL: ${{ steps.meta.outputs.url }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          set -euo pipefail
+          F="Formula/find-symlinks.rb"
+          test -f "$F"
+          python3 - <<'PY'
+import os, re
+path = 'Formula/find-symlinks.rb'
+with open(path, 'r', encoding='utf-8') as f:
+    s = f.read()
+s = re.sub(r'^\s*url\s+"[^"]+"', f'  url "{os.environ["URL"]}"', s, flags=re.M)
+s = re.sub(r'^\s*sha256\s+"[^"]+"', f'  sha256 "{os.environ["SHA"]}"', s, flags=re.M)
+with open(path, 'w', encoding='utf-8') as f:
+    f.write(s)
+PY
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.TAP_TOKEN }}
+          path: tap
+          commit-message: "find-symlinks: update to ${{ steps.meta.outputs.tag }}"
+          branch: update-find-symlinks-${{ steps.meta.outputs.tag }}
+          title: "find-symlinks: update to ${{ steps.meta.outputs.tag }}"
+          body: |
+            Update Formula/find-symlinks.rb to:
+            - url: ${{ steps.meta.outputs.url }}
+            - sha256: ${{ steps.meta.outputs.sha }}
+            Triggered by release ${{ steps.meta.outputs.tag }}.
+
