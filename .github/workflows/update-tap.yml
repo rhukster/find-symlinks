@@ -50,16 +50,9 @@ jobs:
           set -euo pipefail
           F="Formula/find-symlinks.rb"
           test -f "$F"
-          python3 - <<'PY'
-import os, re
-path = 'Formula/find-symlinks.rb'
-with open(path, 'r', encoding='utf-8') as f:
-    s = f.read()
-s = re.sub(r'^\s*url\s+"[^"]+"', f'  url "{os.environ["URL"]}"', s, flags=re.M)
-s = re.sub(r'^\s*sha256\s+"[^"]+"', f'  sha256 "{os.environ["SHA"]}"', s, flags=re.M)
-with open(path, 'w', encoding='utf-8') as f:
-    f.write(s)
-PY
+          sed -i -E "s|^\\s*url\\s+\"[^\"]+\"|  url \"${URL}\"|g" "$F"
+          sed -i -E "s|^\\s*sha256\\s+\"[^\"]+\"|  sha256 \"${SHA}\"|g" "$F"
+          echo "Updated formula:" && git --no-pager diff -- "$F" || true
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v6
@@ -74,4 +67,3 @@ PY
             - url: ${{ steps.meta.outputs.url }}
             - sha256: ${{ steps.meta.outputs.sha }}
             Triggered by release ${{ steps.meta.outputs.tag }}.
-
