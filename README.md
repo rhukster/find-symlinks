@@ -77,6 +77,31 @@ Options:
   - Upload compressed artifacts to the release page.
   - See `.github/workflows/release.yml` for details.
 
+## Homebrew
+
+Option A — Personal tap (recommended initially):
+- Create a tap repo once: `rhukster/homebrew-tap` (empty repo on GitHub).
+- Tag a release here (e.g., `v0.1.0`).
+- Generate a formula from the tag and computed SHA:
+  - `scripts/make-formula.sh 0.1.0`
+  - Commit and push the generated `HomebrewFormula/find-symlinks.rb` to your tap repo at `Formula/find-symlinks.rb`.
+- Install:
+  - `brew tap rhukster/tap`
+  - `brew install find-symlinks`
+
+Quick test without a tap (after committing the formula to this repo):
+- `brew install --formula https://raw.githubusercontent.com/rhukster/find-symlinks/HEAD/HomebrewFormula/find-symlinks.rb`
+
+Option B — Homebrew core (later):
+- After the project matures, you can submit to `homebrew/core` with `brew pr-pull` flow. Start with:
+  - `brew audit --new --formula --strict HomebrewFormula/find-symlinks.rb`
+  - `brew style HomebrewFormula/find-symlinks.rb`
+  - Then open a PR to `homebrew/core` following their guidelines.
+
+Notes:
+- The formula builds from source using Rust; end users need Xcode CLT on macOS.
+- To prebuild bottles for your tap, set up Homebrew's `test-bot` in your tap repo; I can wire this up if you want binary bottles.
+
 ## Versioning & Build Number
 
 - Set explicit version: `scripts/set-version.sh 0.1.1`
