@@ -65,20 +65,22 @@ jobs:
           sed -i -E "s|^\\s*sha256\\s+\"[^\"]+\"|  sha256 \"${SHA}\"|g" "$F"
           echo "Updated formula:" && git --no-pager diff -- "$F" || true
 
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v6
+      - name: Commit and push to tap
         if: steps.check.outputs.has_token == 'true'
-        with:
-          token: ${{ secrets.TAP_TOKEN }}
-          path: tap
-          commit-message: "find-symlinks: update to ${{ steps.meta.outputs.tag }}"
-          branch: update-find-symlinks-${{ steps.meta.outputs.tag }}
-          title: "find-symlinks: update to ${{ steps.meta.outputs.tag }}"
-          body: |
-            Update Formula/find-symlinks.rb to:
-            - url: ${{ steps.meta.outputs.url }}
-            - sha256: ${{ steps.meta.outputs.sha }}
-            Triggered by release ${{ steps.meta.outputs.tag }}.
+        working-directory: tap
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- Formula/find-symlinks.rb; then
+            echo "No changes in formula; nothing to commit."
+            exit 0
+          fi
+          git add Formula/find-symlinks.rb
+          git commit -m "find-symlinks: update to ${TAG}"
+          git push origin HEAD:main
 
       - name: Skip (TAP_TOKEN not set)
         if: steps.check.outputs.has_token != 'true'

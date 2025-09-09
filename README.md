@@ -81,19 +81,7 @@ Options:
 - Performance: multi-threaded traversal and resolution (rayon). Progress bars use `indicatif`.
 - Exit codes: non-zero on invalid options or when the target path cannot be resolved.
 
-## Releases
-
-- Creating a GitHub Release (type: Published) triggers GitHub Actions to:
-  - Build release binaries for macOS (aarch64-apple-darwin), Linux (x86_64-unknown-linux-gnu), and Windows (x86_64-pc-windows-msvc).
-  - Upload compressed artifacts to the release page.
-  - See `.github/workflows/release.yml` for details.
-
-### Homebrew tap auto-update
-
-- This repo includes `.github/workflows/update-tap.yml` which, on each published release, updates the tap formula `rhukster/homebrew-tap/Formula/find-symlinks.rb` with the correct tag URL and SHA256 and opens a PR.
-- Setup required once: add a repo secret `TAP_TOKEN` that is a Personal Access Token with `repo` scope so the workflow can push a branch and open a PR in the tap repo.
-
-## Versioning & Build Number
+## Versioning & Build Number (internal reference)
 
 - Set explicit version: `scripts/set-version.sh 0.1.1`
 - Bump version: `scripts/bump-version.sh <patch|minor|major>`
