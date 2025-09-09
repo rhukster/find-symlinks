@@ -66,26 +66,27 @@ jobs:
       - name: Prepare release archives
         run: |
           set -euo pipefail
-          mkdir -p dist
+          outdir="$(pwd)/dist"
+          mkdir -p "$outdir"
           for t in ${TARGETS}; do
             aname="find-symlinks-${t}"
             adir="artifacts/${aname}"
             if [[ -d "${adir}" ]]; then
               bin="${adir}/find-symlinks"
               if [[ ! -f "${bin}" ]]; then bin="${adir}/find-symlinks.exe"; fi
-              base="dist/find-symlinks-${t}-${VERSION}"
+              base="find-symlinks-${t}-${VERSION}"
               if [[ "${bin}" == *.exe ]]; then
-                zipfile="${base}.zip"
-                (cd "${adir}" && zip -9 "${PWD}/${zipfile}" "$(basename "${bin}")")
+                zipfile="${outdir}/${base}.zip"
+                (cd "${adir}" && zip -9 "${zipfile}" "$(basename "${bin}")")
               else
-                tarfile="${base}.tar.gz"
-                (cd "${adir}" && tar -czf "${PWD}/${tarfile}" "$(basename "${bin}")")
+                tarfile="${outdir}/${base}.tar.gz"
+                tar -C "${adir}" -czf "${tarfile}" "$(basename "${bin}")"
               fi
             else
               echo "WARN: Missing artifact ${aname}"
             fi
           done
-          ls -lah dist
+          ls -lah "$outdir"
       - name: Upload assets to release
         uses: softprops/action-gh-release@v2
         with:

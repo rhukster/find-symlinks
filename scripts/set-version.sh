@@ -15,14 +15,16 @@ fi
 if command -v cargo >/dev/null 2>&1 && cargo --list | grep -q "set-version"; then
   cargo set-version "$NEW_VER"
 else
-  # Fallback: replace the first package version line
-  if sed --version >/dev/null 2>&1; then
-    # GNU sed
-    sed -i "0,/^version = \".*\"/s//version = \"$NEW_VER\"/" Cargo.toml
-  else
-    # BSD/macOS sed
-    sed -i '' "0,/^version = \".*\"/s//version = \"$NEW_VER\"/" Cargo.toml
-  fi
+  # Robust fallback: update only the [package] section's version using awk
+  tmp=$(mktemp)
+  awk -v new="$NEW_VER" '
+    BEGIN{in_pkg=0; done=0}
+    /^\[package\]/{in_pkg=1}
+    /^\[/{if($0!~/^\[package\]/){in_pkg=0}}
+    in_pkg && /^version *= *\"/ && !done { sub(/version *= *\"[^\"]+\"/, "version = \"" new "\""); done=1 }
+    { print }
+  ' Cargo.toml > "$tmp"
+  mv "$tmp" Cargo.toml
 fi
 
 echo "Set Cargo.toml version to ${NEW_VER}" >&2
