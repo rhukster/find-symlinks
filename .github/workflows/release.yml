@@ -1,0 +1,94 @@
+name: release-builds
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Cargo build (release)
+        run: cargo build --locked --release --target ${{ matrix.target }}
+      - name: Upload artifact (unix)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: find-symlinks-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/find-symlinks
+          if-no-files-found: error
+      - name: Upload artifact (windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: find-symlinks-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/find-symlinks.exe
+          if-no-files-found: error
+
+  publish:
+    name: publish assets
+    needs: [build]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.event.release.tag_name }}
+      TARGETS: |
+        x86_64-unknown-linux-gnu
+        aarch64-apple-darwin
+        x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: false
+      - name: Prepare release archives
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for t in ${TARGETS}; do
+            aname="find-symlinks-${t}"
+            adir="artifacts/${aname}"
+            if [[ -d "${adir}" ]]; then
+              bin="${adir}/find-symlinks"
+              if [[ ! -f "${bin}" ]]; then bin="${adir}/find-symlinks.exe"; fi
+              base="dist/find-symlinks-${t}-${VERSION}"
+              if [[ "${bin}" == *.exe ]]; then
+                zipfile="${base}.zip"
+                (cd "${adir}" && zip -9 "${PWD}/${zipfile}" "$(basename "${bin}")")
+              else
+                tarfile="${base}.tar.gz"
+                (cd "${adir}" && tar -czf "${PWD}/${tarfile}" "$(basename "${bin}")")
+              fi
+            else
+              echo "WARN: Missing artifact ${aname}"
+            fi
+          done
+          ls -lah dist
+      - name: Upload assets to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
