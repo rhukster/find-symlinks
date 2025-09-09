@@ -13,7 +13,7 @@ use num_format::{Locale, ToFormattedString};
 use rayon::prelude::*;
 
 #[derive(Parser, Debug)]
-#[command(version, about = "Fast symlink finder (Rust)")]
+#[command(version = env!("PKG_VERSION_WITH_BUILD"), about = "Fast symlink finder (Rust)")]
 struct Opts {
     /// Absolute path to target to match against
     target: String,

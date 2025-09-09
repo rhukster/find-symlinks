@@ -28,6 +28,8 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - name: Cargo build (release)
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: cargo build --locked --release --target ${{ matrix.target }}
       - name: Upload artifact (unix)
         if: runner.os != 'Windows'
@@ -91,4 +93,3 @@ jobs:
             dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

@@ -2,14 +2,15 @@
 
 Fast symlink finder written in Rust. It scans the current directory tree and reports any symbolic links that resolve to a given target. It features a compact TUI, fast parallel traversal, and optional JSON output.
 
-**Version:** `0.1.0`
-
 ## Install
 
 - Prerequisite: Rust toolchain (`cargo`).
 - From this repo:
   - Build: `cargo build --release` → binary at `target/release/find-symlinks`
   - Install into `$HOME/.cargo/bin`: `cargo install --path .`
+  - Install into a custom dir (e.g. `~/bin`): `cargo install --path . --root ~/bin`
+
+Note: `--path` must point to the crate source directory (the one containing `Cargo.toml`). Use `--root` to choose where the compiled binary is installed. Ensure your chosen install dir is on your `PATH`.
 
 ## Usage
 
@@ -75,3 +76,12 @@ Options:
   - Build release binaries for macOS (aarch64-apple-darwin), Linux (x86_64-unknown-linux-gnu), and Windows (x86_64-pc-windows-msvc).
   - Upload compressed artifacts to the release page.
   - See `.github/workflows/release.yml` for details.
+
+## Versioning & Build Number
+
+- Set explicit version: `scripts/set-version.sh 0.1.1`
+- Bump version: `scripts/bump-version.sh <patch|minor|major>`
+- Build number:
+  - Auto-incremented and embedded at compile time; `--version` prints e.g. `find-symlinks 0.1.0 (build 7)`.
+  - For per-invocation increments, use wrapper: `scripts/build.sh --release` (sets `BUILD_NUMBER` and compiles).
+  - CI sets `BUILD_NUMBER` to the GitHub `run_number` for reproducible release artifacts.
